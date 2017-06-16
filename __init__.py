@@ -26,6 +26,7 @@ The list of "bpy.context" varies in different area/space.  Some of the context c
 
 Adding more modules are easy tasks.  See comment.
 
+IMPORTANT:  bpy.types has 5000+ entries, it will freeze for a blink.  It's not very useful having 5000 items in the menu I know.  Working on a special menu for submodule that contains large amount of entries.
 
 '''
 
@@ -92,7 +93,7 @@ command = ''
 subject = None
 
 def check_modules():
-    global modules, mathutils, bmesh
+    global modules, mathutils, bmesh # Add 'numpy' here to declare it global for the rest of this method.  Otherwise the reference of numpy may be local
     if pref().access_mu and mathutils == None:
         import mathutils
     if pref().access_bm and bmesh == None:
@@ -204,7 +205,7 @@ class TCK_menu_call(bpy.types.Operator):
         check_modules()
         if len(getModules()) < 2:
             subject = modules[0]
-            # Skips the first menu when there are only 1 option to choose.  This defaults to the 'bpy' module.
+            # Skips the first menu when there are only 1 option to choose.  By default only the 'bpy' module is available, so if there are no other modules, the first menu will be all the attributes inside bpy.
             command = command + '  ' + get_module_name(subject)
         else:
             subject = getModules()
