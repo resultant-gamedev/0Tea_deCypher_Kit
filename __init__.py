@@ -114,7 +114,6 @@ modules = []
 command = ''
 
 subject = None
-last_subject = None
 count = 0
 
 def check_modules():
@@ -141,11 +140,14 @@ def getModules():
         modules.remove(bpy)
     return modules # If numpy is still 'None', it means it hasn't been imported, which means it's turned off in the preferences, which will be excluded from the targets.
 
-def extract_command(module_name = ''):
+def command_extract(module_name = ''):
     global command
     if module_name == '':
-        j = command.rfind('  ')
-        return command[(j+2):]
+        i = command.rfind('  ')
+        if i == -1:
+            return ''
+        else:
+            return command[(i+2):]
     else:
         i = command.rfind(module_name)
         return command[i:]
@@ -173,20 +175,17 @@ def get_name(candidate):
         }
         return modules_dict.get(candidate, None)
     else:
-        if candidate == last_subject and count == 0:
-            return "Last Access"
+        dirs = dir(candidate)
+        if 'module' in dirs:
+            return candidate.module
+        elif 'name' in dirs:
+            return candidate.name
+        elif 'type' in dirs:
+            return candidate.type
+        elif 'bl_rna' in dirs and 'name' in dir(candidate.bl_rna):
+            return candidate.bl_rna.name
         else:
-            dirs = dir(candidate)
-            if 'module' in dirs:
-                return candidate.module
-            elif 'name' in dirs:
-                return candidate.name
-            elif 'type' in dirs:
-                return candidate.type
-            elif 'bl_rna' in dirs and 'name' in dir(candidate.bl_rna):
-                return candidate.bl_rna.name
-            else:
-                return str(candidate)
+            return str(candidate)
 
 
 class TCK_generate(bpy.types.Operator):
@@ -203,14 +202,14 @@ class TCK_generate(bpy.types.Operator):
         obj = getattr(subject, self.attribute)
 
         command = command + '.' + self.attribute
-        context.window_manager.clipboard = extract_command()
+        context.window_manager.clipboard = command_extract()
         print_info(self, obj)
 
         if is_basetype(obj):
             return {'FINISHED'}
         else:
             subject = obj
-            bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
+            bpy.ops.wm.call_menu(name = TCK_MT_Menu.bl_idname)
             count += 1
             return {'FINISHED'}
 
@@ -232,14 +231,14 @@ class TCK_iterate(bpy.types.Operator):
         else:
             command = command + "[{}]".format(self.index)
 
-        context.window_manager.clipboard = extract_command()
+        context.window_manager.clipboard = command_extract()
         print_info(self, obj)
 
         if is_basetype(obj):
             return {'FINISHED'}
         else:
             subject = obj
-            bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
+            bpy.ops.wm.call_menu(name = TCK_MT_Menu.bl_idname)
             count += 1
             return {'FINISHED'}
 
@@ -249,39 +248,42 @@ special_names = ['name', 'type', 'mode', 'color', 'draw_type']
 special_access = ['tna.outerp', 'tna.prefix', 'tna.core', 'tna.suffix']
 
 
-class TCK_menu_call(bpy.types.Operator):
-    bl_idname = "tck.menu_call"
-    bl_label = "deCypher"
-
-    def execute(self, context):
-        global subject, command
-        check_modules()
-        if len(getModules()) < 2:
-            subject = modules[0]
-            # Skips the first menu when there are only 1 option to choose.  By default only the 'bpy' module is available, so if there are no other modules, the first menu will be all the attributes inside bpy.
-            command = command + '  ' + get_name(subject)
-        else:
-            subject = getModules()
-        bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
-        return {'FINISHED'}
-
-
-class TCK_menu(bpy.types.Menu):
-    bl_idname = "tca.menu"
+class TCK_MT_Menu(bpy.types.Menu):
+    bl_idname = "TCK_MT_Menu"
     bl_label = "deCypher"
 
     def draw(self, context):
+        global count
         layout = self.layout
         col = layout.column_flow(columns = 3, align = True) # Change the column number for a wider menu.
-        if subject in modules:
+        if subject in getModules():
             for i in aDir(subject):
                 col.operator("tck.generate", text = i).attribute = i
         elif hasattr(subject, '__iter__') and subject not in iter_exceptions:
             for index, i in enumerate(subject):
                 col.operator("tck.iterate", text = get_name(i)).index = index
+            
         else:
             for i in aDir(subject):
                 col.operator("tck.generate", text = i).attribute = i
+
+
+class TCK_menu_call(bpy.types.Operator):
+    bl_idname = "tck.menu_call"
+    bl_label = "deCypher"
+
+    def execute(self, context):
+        print("\nStarting deCypher...")
+        global subject, command, count
+        count = 0
+        check_modules()
+        if len(getModules()) == 1:
+            subject = modules[0]
+            command = command + '  ' + get_name(subject)
+        else:
+            subject = getModules()
+        bpy.ops.wm.call_menu(name = TCK_MT_Menu.bl_idname)
+        return {'FINISHED'}
 
 
 # Registration
