@@ -48,14 +48,20 @@ class TCK_Pref(bpy.types.AddonPreferences):
         name = "Hide Attribute Names That Starts With Underscore",
         default = True)
 
-    # Properties to access mathutils module.
-    access_mu = bpy.props.BoolProperty(
-        name = "Access Mathutils",
+    access_bpy = bpy.props.BoolProperty(
+        name = "Bpy",
+        default = True)
+
+    access_bpy_extras = bpy.props.BoolProperty(
+        name = "Bpy_Extras",
         default = False)
 
-    # Properties to access bmesh module.
-    access_bm = bpy.props.BoolProperty(
-        name = "Access Bmesh",
+    access_bmesh = bpy.props.BoolProperty(
+        name = "Bmesh",
+        default = False)
+
+    access_mathutils = bpy.props.BoolProperty(
+        name = "Mathutils",
         default = False)
 
     # access_numpy = bpy.props.BoolProperty(
@@ -64,19 +70,35 @@ class TCK_Pref(bpy.types.AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
-        box = layout.box()
-        col = box.column()
-        row = col.split(1/2, True)
-        row.prop(self, "hide_generic", toggle = True)
-        sub = row.split(1/2, True) # Change this to 1/3 so the numpy button can fit in the row.
-        sub.prop(self, "access_mu", toggle = True)
-        sub.prop(self, "access_bm", toggle = True)
-        # sub.prop(self, "access_numpy", toggle = True)
+        row = layout.split(1/2)
 
+        b1 = row.box()
+        b2 = row.box()
+
+        opt_col = b1.column(True)
+        opt_col.label("Defaults to 'bpy' if all modules turned off.")
+        opt_col.separator()
+        opt_col.prop(self, "hide_generic", toggle = True)
+
+        mod_col = b2.column(True)
+        mod_col.label("Module Access:")
+        mod_col.separator()
+        mod_row = mod_col.row(True)
+        mod_row.prop(self, "access_bpy", toggle = True)
+        mod_row.prop(self, "access_bpy_extras", toggle = True)
+        mod_row.prop(self, "access_bmesh", toggle = True)
+        mod_row.prop(self, "access_mathutils", toggle = True)
+        # sub.prop(self, "access_numpy", toggle = True)
 
 def pref():
     return bpy.context.user_preferences.addons[__name__].preferences
 
+def aDir(subject):
+    return [i for i in dir(subject) if not (pref().hide_generic and i.startswith('_'))]
+
+def print_info(self):
+    # self.report({'INFO'}, '{}'.format(str(subject)))
+    return
 ### Here is a good place to import modules.
 ### If you don't wish the ON/OFF toggle, you can import it along side the 'bpy' module at the top of this file.
 
@@ -84,34 +106,42 @@ def pref():
 # import numpy
 # OR
 # numpy = None      if you wish to turn it on or off.
-
-mathutils = None
+bpy_extras = None
 bmesh = None
-modules = []
+mathutils = None
 
+modules = []
 command = ''
+
 subject = None
+last_subject = None
+count = 0
 
 def check_modules():
-    global modules, mathutils, bmesh # Add 'numpy' here to declare it global for the rest of this method.  Otherwise the reference of numpy may be local
-    if pref().access_mu and mathutils == None:
-        import mathutils
-    if pref().access_bm and bmesh == None:
-        import bmesh
-#   Adds on/off function for the numpy module.
-### if pref().access_numpy and numpy == None:
-###     import numpy
+    global bpy_extras, bmesh, mathutils
 
+    if pref().access_bpy_extras: import bpy_extras
+    else: bpy_extras = None
+
+    if pref().access_bmesh: import bmesh
+    else: bmesh = None
+
+    if pref().access_mathutils: import mathutils
+    else: mathutils = None
+
+#   Adds on/off function for the numpy module.
+### if pref().access_mathutils: import numpy
+### else: numpy = None
 
 def getModules():
     global modules
-    modules = [bpy, mathutils, bmesh] # Add numpy here.
-    return [m for m in modules if m != None] # If numpy is still 'None', it means it hasn't been imported, which means it's turned off in the preferences, which will be excluded from the targets.
+    modules = [bpy, bpy_extras, bmesh, mathutils] # Add numpy here.
+    modules = [m for m in modules if m != None]
+    if not pref().access_bpy and len(modules) != 1:
+        modules.remove(bpy)
+    return modules # If numpy is still 'None', it means it hasn't been imported, which means it's turned off in the preferences, which will be excluded from the targets.
 
-def aDir(subject):
-    return [i for i in dir(subject) if not (pref().hide_generic and i.startswith('_'))]
-
-def extract_last_command(module_name = ''):
+def extract_command(module_name = ''):
     global command
     if module_name == '':
         j = command.rfind('  ')
@@ -120,28 +150,43 @@ def extract_last_command(module_name = ''):
         i = command.rfind(module_name)
         return command[i:]
 
-def get_module_name(module):
-    modules = {
-        bpy         :   "bpy",
-        mathutils   :   "mathutils",
-        bmesh       :   "bmesh",
-        # numpy       :   "numpy",
-        ### So that the UI knows what name to give all the modules when the menu tries to generate a list for them.  Modules do not have name properties.  Or I wasn't able to find it.
-    }
-    return modules.get(module, None)
+def command_last_access():
+    access_sequence = access.split('.')
+    return '.'.join(access_sequence[-2:])
 
-def get_name(subject):
-    dirs = dir(subject)
-    if subject in modules:
-        return get_module_name(subject)
-    elif 'module' in dirs:
-        return subject.module
-    elif 'name' in dirs:
-        return subject.name
-    elif 'bl_rna' in dirs and 'name' in dir(subject.bl_rna):
-        return subject.bl_rna.name
+def print_info(self, obj):
+    self.report({'INFO'}, '{}'.format(str(obj)))
+
+def is_basetype(obj):
+    basetype = [str, bool, int, float]
+    return type(obj) in basetype
+
+def get_name(candidate):
+    if candidate in getModules():
+        modules_dict = {
+            bpy             :   "bpy",
+            bpy_extras      :   "bpy_extras",
+            bmesh           :   "bmesh",
+            mathutils       :   "mathutils",
+            # numpy       :   "numpy",
+            ### So that the UI knows what name to give all the modules when the menu tries to generate a list for them.  Modules do not have name properties.  Or I wasn't able to find it.
+        }
+        return modules_dict.get(candidate, None)
     else:
-        return str(subject)
+        if candidate == last_subject and count == 0:
+            return "Last Access"
+        else:
+            dirs = dir(candidate)
+            if 'module' in dirs:
+                return candidate.module
+            elif 'name' in dirs:
+                return candidate.name
+            elif 'type' in dirs:
+                return candidate.type
+            elif 'bl_rna' in dirs and 'name' in dir(candidate.bl_rna):
+                return candidate.bl_rna.name
+            else:
+                return str(candidate)
 
 
 class TCK_generate(bpy.types.Operator):
@@ -154,18 +199,20 @@ class TCK_generate(bpy.types.Operator):
         if self.attribute == '':
             return {'CANCELLED'}
 
-        global subject, command
+        global subject, command, count
         obj = getattr(subject, self.attribute)
 
         command = command + '.' + self.attribute
-        context.window_manager.clipboard = extract_last_command()
-        self.report({'OPERATOR'}, '{}'.format(str(obj)))
+        context.window_manager.clipboard = extract_command()
+        print_info(self, obj)
 
-        if self.attribute in special_attributes:
+        if is_basetype(obj):
             return {'FINISHED'}
-        subject = obj
-        bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
-        return {'FINISHED'}
+        else:
+            subject = obj
+            bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
+            count += 1
+            return {'FINISHED'}
 
 
 class TCK_iterate(bpy.types.Operator):
@@ -178,22 +225,28 @@ class TCK_iterate(bpy.types.Operator):
         if self.index < 0:
             return {'CANCELLED'}
 
-        global subject, command
+        global subject, command, count
         obj = subject[self.index]
         if obj in modules:
-            command = command + '  ' + get_module_name(obj)
+            command = command + '  ' + get_name(obj)
         else:
             command = command + "[{}]".format(self.index)
 
-        context.window_manager.clipboard = extract_last_command()
-        self.report({'OPERATOR'}, '{}'.format(str(obj)))
+        context.window_manager.clipboard = extract_command()
+        print_info(self, obj)
 
-        subject = obj
-        bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
-        return {'FINISHED'}
+        if is_basetype(obj):
+            return {'FINISHED'}
+        else:
+            subject = obj
+            bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
+            count += 1
+            return {'FINISHED'}
 
-exceptions = [bpy.app]
-special_attributes = ['name',]
+
+iter_exceptions = [bpy.app]
+special_names = ['name', 'type', 'mode', 'color', 'draw_type']
+special_access = ['tna.outerp', 'tna.prefix', 'tna.core', 'tna.suffix']
 
 
 class TCK_menu_call(bpy.types.Operator):
@@ -206,7 +259,7 @@ class TCK_menu_call(bpy.types.Operator):
         if len(getModules()) < 2:
             subject = modules[0]
             # Skips the first menu when there are only 1 option to choose.  By default only the 'bpy' module is available, so if there are no other modules, the first menu will be all the attributes inside bpy.
-            command = command + '  ' + get_module_name(subject)
+            command = command + '  ' + get_name(subject)
         else:
             subject = getModules()
         bpy.ops.wm.call_menu(name = TCK_menu.bl_idname)
@@ -219,11 +272,11 @@ class TCK_menu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-        col = layout.column_flow(columns = 4, align = True) # Change the column number for a wider menu.
+        col = layout.column_flow(columns = 3, align = True) # Change the column number for a wider menu.
         if subject in modules:
             for i in aDir(subject):
                 col.operator("tck.generate", text = i).attribute = i
-        elif hasattr(subject, '__iter__') and subject not in exceptions:
+        elif hasattr(subject, '__iter__') and subject not in iter_exceptions:
             for index, i in enumerate(subject):
                 col.operator("tck.iterate", text = get_name(i)).index = index
         else:
