@@ -1,5 +1,5 @@
 # 0Tea_deCypher_Kit
-Blender, access to module command/API with ease.
+Blender, access to module command with ease.
 
 Easy access for additional modules.  Mathutils and Bmesh module support is included.  Instructions on how to add support for any modules are commented along side an example of Numpy module.
 
