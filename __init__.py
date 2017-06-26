@@ -31,7 +31,7 @@ IMPORTANT:  bpy.types has 5000+ entries, it will freeze for a blink.  It's not v
 '''
 
 bl_info = {
-    "name": "Tea's deCypher Kit [TCK] 1.2",
+    "name": "Tea's deCypher Kit [TCK] 1.3",
     "author": "TeaCrab",
     "blender": (2, 7, 8),
     "description": "Generate menus for all available attributes from selected modules.",
