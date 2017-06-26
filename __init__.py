@@ -1,4 +1,3 @@
-# Tea's deCypher Kit, get into the API in no time.
 # Copyright (C) 2016  Yuanqing(Brent) Liu
 
 # ### BEGIN GPL LICENSE BLOCK ###
@@ -41,6 +40,22 @@ bl_info = {
 
 import bpy
 from mathutils import Color, Euler, Vector, Matrix, Quaternion
+
+### Import modules here if you don't wish the ON/OFF toggle.
+
+# Example:
+# import {module}
+# OR
+numpy = None
+bpy_extras = None
+bmesh = None
+mathutils = None
+
+modules = []
+command = ''
+
+subject = None
+count = 0
 
 class TCK_Pref(bpy.types.AddonPreferences):
     bl_idname = __name__
@@ -89,6 +104,10 @@ class TCK_Pref(bpy.types.AddonPreferences):
     access_numpy = bpy.props.BoolProperty(
         name = "Numpy",
         default = False)
+
+    # access_{module} = bpy.props.BoolProperty(
+    #     name = "{module}",
+    #     default = False)
 
     def draw(self, context):
         layout = self.layout
@@ -151,22 +170,7 @@ def check_name(string):
         else:
             return all(i in string for i in target)
 
-### Here is a good place to import modules.
-### If you don't wish the ON/OFF toggle, you can import it along side the 'bpy' module at the top of this file.
 
-# Example:
-# import numpy
-# OR
-numpy = None
-bpy_extras = None
-bmesh = None
-mathutils = None
-
-modules = []
-command = ''
-
-subject = None
-count = 0
 
 def check_modules():
     global bpy_extras, bmesh, mathutils, numpy
@@ -183,9 +187,10 @@ def check_modules():
     if pref().access_numpy: import numpy
     else: numpy = None
 
-#   Adds on/off function for the numpy module.
-### if pref().access_mathutils: import numpy
-### else: numpy = None
+### if pref().access_{module}: import {module}
+### else: {module} = None
+#   This is to achieve on/off toggle function for the new module .
+
 
 def getModules():
     global modules
@@ -193,7 +198,7 @@ def getModules():
     modules = [m for m in modules if m != None]
     if not pref().access_bpy:
         modules.remove(bpy)
-    return modules # If numpy is still 'None', it means it hasn't been imported, which means it's turned off in the preferences, which will be excluded from the targets.
+    return modules # If {module} != 'None', it means it's imported, which will show up in the initial menu.
 
 def command_extract(module_name = ''):
     global command
@@ -221,17 +226,11 @@ def is_basetype(obj):
 
 def get_name(candidate, deep = False):
     if candidate in getModules():
-        modules_dict = {
-            bpy             :   "bpy",
-            bpy_extras      :   "bpy_extras",
-            bmesh           :   "bmesh",
-            mathutils       :   "mathutils",
-            numpy           :   "numpy",
-            ### So that the UI knows what name to give all the modules when the menu tries to generate a list for them.  Modules do not have name properties.  Or I wasn't able to find it.
-        }
-        return modules_dict.get(candidate, None)
+        return candidate.__name__
     elif deep:
         dirs = dir(candidate)
+        if __name__ in dirs:
+            return str(candidate.__name__)
         if 'module' in dirs:
             return str(candidate.module)
         elif 'name' in dirs:
