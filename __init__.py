@@ -199,16 +199,11 @@ def command_extract(module_name = ''):
         if i == -1:
             return ''
         else:
-            result = command[(i+2):]
-            command = ''
-            return result
+            return command[(i+2):]
     else:
         i = command.rfind(module_name)
-        result = command[i:]
-        command = ''
-        return result
+        return command[i:]
 
-# This function hasn't being used.
 def command_last_access():
     access_sequence = command.split('.')
     return '.'.join(access_sequence[-2:])
