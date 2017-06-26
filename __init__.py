@@ -139,14 +139,17 @@ def getColumn():
 
 def check_name(string):
     mode = pref().filter_mode
-    target = pref().filter_target.lower()
+    target = pref().filter_target.lower().split()
     string = string.lower()
-    if mode == 'S':
-        return string.startswith(target)
-    elif mode == 'E':
-        return string.endswith(target)
+    if target == []:
+        return True
     else:
-        return target in string
+        if mode == 'S':
+            return any(string.startswith(i) for i in target)
+        elif mode == 'E':
+            return any(string.endswith(i) for i in target)
+        else:
+            return all(i in string for i in target)
 
 ### Here is a good place to import modules.
 ### If you don't wish the ON/OFF toggle, you can import it along side the 'bpy' module at the top of this file.
