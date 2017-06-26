@@ -202,14 +202,10 @@ def command_extract(module_name = ''):
         if i == -1:
             return ''
         else:
-            result = command[(i+2):]
-            command = ''
-            return result
+            return command[(i+2):]
     else:
         i = command.rfind(module_name)
-        result = command[i:]
-        command = ''
-        return result
+        return command[i:]
 
 # This function hasn't being used.
 def command_last_access():
@@ -254,7 +250,19 @@ class TCK_generate(bpy.types.Operator):
     bl_idname = "tck.generate"
     bl_label = "TCK_generate"
 
-    attribute = bpy.props.StringProperty(default = '')
+    attribute = bpy.props.StringProperty(options = {'HIDDEN'}, default = '')
+    mode = bpy.props.StringProperty(options = {'HIDDEN'}, default = '')
+
+    def invoke(self, context, event):
+        self.mode = ''
+        if event.shift:
+            self.mode = 'FILTER'
+        elif event.oskey or event.alt:
+            self.mode = 'BYPASS'
+        if pref().filter_resets:
+            pref().filter_target = ''
+            pref().filter_mode = 'N'
+        return self.execute(context)
 
     def execute(self, context):
         if self.attribute == '':
@@ -269,7 +277,12 @@ class TCK_generate(bpy.types.Operator):
 
         if is_basetype(obj) or callable(obj):
             return {'FINISHED'}
-        elif overmass(obj):
+        elif self.mode == 'BYPASS':
+            subject = obj
+            bpy.ops.wm.call_menu(name = TCK_MT_Menu.bl_idname)
+            count += 1
+            return {'FINISHED'}
+        elif self.mode == 'FILTER' or overmass(obj):
             subject = obj
             bpy.ops.tck.filter("INVOKE_DEFAULT")
             count += 1
@@ -286,6 +299,18 @@ class TCK_iterate(bpy.types.Operator):
     bl_label = "TCK_iterate"
 
     index = bpy.props.IntProperty(default = -1)
+    mode = bpy.props.StringProperty(options = {'HIDDEN'}, default = '')
+
+    def invoke(self, context, event):
+        self.mode = ''
+        if event.shift:
+            self.mode = 'FILTER'
+        elif event.oskey or event.alt:
+            self.mode = 'BYPASS'
+        if pref().filter_resets:
+            pref().filter_target = ''
+            pref().filter_mode = 'N'
+        return self.execute(context)
 
     def execute(self, context):
         if self.index < 0:
@@ -303,7 +328,12 @@ class TCK_iterate(bpy.types.Operator):
 
         if is_basetype(obj) or callable(obj):
             return {'FINISHED'}
-        elif overmass(obj):
+        elif self.mode == 'BYPASS':
+            subject = obj
+            bpy.ops.wm.call_menu(name = TCK_MT_Menu.bl_idname)
+            count += 1
+            return {'FINISHED'}
+        elif self.mode == 'FILTER' or overmass(obj):
             subject = obj
             bpy.ops.tck.filter("INVOKE_DEFAULT")
             count += 1
@@ -375,6 +405,7 @@ class TCK_MT_Submenu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
+        layout.operator_context = 'INVOKE_DEFAULT'
         col = layout.column_flow(columns = getColumn(), align = True) # Change the column number for a wider menu.
         if subject in getModules():
             for i in aDir(subject):
@@ -396,7 +427,7 @@ class TCK_MT_Menu(bpy.types.Menu):
 
     def draw(self, context):
         layout = self.layout
-
+        layout.operator_context = 'INVOKE_DEFAULT'
         col = layout.column_flow(columns = getColumn(), align = True) # Change the column number for a wider menu.
         if subject in getModules():
             for i in aDir(subject):
