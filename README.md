@@ -1,6 +1,8 @@
 # 0Tea_deCypher_Kit
 Blender, access to module command with ease.
 
+Sorry about the frequent little changes, just realized I don't have to push the commit for every little changes I make. :P
+
 UPDATE v1.3:
 
   Added multi-word filter popup for modules with high number of attributes.
