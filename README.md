@@ -4,8 +4,8 @@ Blender, access to module command with ease.
 UPDATE v1.3:
 
   Added multi-word filter popup for modules with high number of attributes.
-  Filter popup can be forced by holding down <Shift> key when clicking on a menu item.
-  It can also be skipped by holding down <Alt> or <OS-key>.
+  Filter popup can be forced by holding down Shift key when clicking on a menu item.
+  It can also be skipped by holding down Alt or OS-key.
 
 
 UPDATE v1.2:
