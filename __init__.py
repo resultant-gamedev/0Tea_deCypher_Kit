@@ -117,7 +117,7 @@ class TCK_Pref(bpy.types.AddonPreferences):
         b2 = row.box()
 
         opt_col = b1.column(True)
-        opt_col.label("Defaults to 'bpy.context' if all modules turned off.")
+        opt_col.label("Use 'bpy.context' when no modules are enabled.")
         opt_col.separator()
         opt_col.prop(self, "hide_generic", toggle = True)
         opt_row = opt_col.split(4/5, True)
